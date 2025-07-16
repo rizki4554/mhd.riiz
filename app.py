@@ -7,7 +7,21 @@ import numpy as np
 
 app = Flask(__name__)
 
-model = YOLO('palingbaru.pt') 
+import urllib.request
+
+# Cek apakah model belum di-download
+MODEL_PATH = "palingbaru.pt"
+GDRIVE_ID = "1rOva-D9aOBxApVI_YKcKSxvPLw5xHs0U"
+
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model from Google Drive...")
+    gdown_url = f"https://drive.google.com/uc?export=download&id={GDRIVE_ID}"
+    urllib.request.urlretrieve(gdown_url, MODEL_PATH)
+    print("Download selesai!")
+
+# Load model YOLO
+model = YOLO(MODEL_PATH)
+# 
 
 # Label map ular - menggunakan mapping yang sama dengan kode asli
 label_map = {
