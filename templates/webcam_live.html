@@ -1,50 +1,75 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <title>Deteksi Ular - Webcam Live</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f5f5f5;
-            text-align: center;
-            font-family: 'Poppins', sans-serif;
-            padding: 40px;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        img {
-            margin-top: 10px;
-            border-radius: 12px;
-            border: 3px solid #333;
-            max-width: 100%;
-        }
-
-        .back-btn {
-            display: inline-block;
-            margin-top: 30px;
-            text-decoration: none;
-            background-color: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            transition: background-color 0.3s ease;
-        }
-
-        .back-btn:hover {
-            background-color: #0056b3;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Deteksi Ular via Kamera</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f5f5f5;
+      text-align: center;
+      padding: 40px;
+    }
+    video, img {
+      width: 100%;
+      max-width: 640px;
+      border: 3px solid #333;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .btn {
+      background-color: #28a745;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .btn:hover {
+      background-color: #218838;
+    }
+    .result {
+      margin-top: 30px;
+    }
+  </style>
 </head>
 <body>
-    <h2>🔍 Deteksi Jenis Ular - Live dari Kamera</h2>
-    <img src="{{ url_for('video_feed') }}" width="720" />
+  <h2>📷 Akses Kamera dari Browser</h2>
+  <video id="webcam" autoplay playsinline></video>
+  <br>
+  <button class="btn" onclick="capture()">🔍 Deteksi Sekarang</button>
 
-    <br>
-    <a class="back-btn" href="/">⬅️ Kembali ke Halaman Utama</a>
+  <canvas id="canvas" style="display:none;"></canvas>
+  <div class="result" id="result"></div>
+
+  <script>
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const result = document.getElementById('result');
+
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+    });
+
+    function capture() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      canvas.toBlob(blob => {
+        const formData = new FormData();
+        formData.append('image', blob, 'capture.jpg');
+
+        fetch('/upload', {
+          method: 'POST',
+          body: formData
+        }).then(response => response.text())
+          .then(html => {
+            result.innerHTML = html;
+          });
+      }, 'image/jpeg');
+    }
+  </script>
 </body>
 </html>
