@@ -1,2 +1,6 @@
 [build]
 nixpkgs = ["libGL", "libGLU", "pkg-config", "python311", "gcc"]
+
+[variables]
+OPENCV_IO_ENABLE_OPENEXR = "0"
+OPENCV_IO_ENABLE_JASPER = "0"
