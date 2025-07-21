@@ -1,5 +1,8 @@
 [build]
-nixpkgs = ["libGL", "python311", "gcc"]
+nixpkgs = ["python311", "gcc"]
+
+[phases.setup]
+aptPkgs = ["libgl1"]
 
 [start]
 cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
