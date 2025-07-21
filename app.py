@@ -1,17 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, Response
+from flask import Flask, render_template, request, redirect, url_for
 from ultralytics import YOLO
-import cv2
 import os
 from datetime import datetime
 import numpy as np
 
 app = Flask(__name__)
 
-model = YOLO('palingbaru.pt') 
+# Load model (pastikan model .pt sudah diunduh di Railway atau gunakan URL publik)
+model = YOLO('palingbaru.pt')
 
-# Label map ular - menggunakan mapping yang sama dengan kode asli
+# Mapping label dari YOLO ke nama ular
 label_map = {
-    "31 0 0 0 1 1 1 1 0 0 0": "Acrochordus granulatus (Tidak Berbisa)",
+   "31 0 0 0 1 1 1 1 0 0 0": "Acrochordus granulatus (Tidak Berbisa)",
     "1": "Aipysurus laevis (Berbisa)",
     "2": "Atractus trilineatus (Tidak Berbisa)",
     "3": "Boiga cyanea (Berbisa)",
@@ -76,82 +76,13 @@ label_map = {
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Fungsi untuk generate warna unik per kelas (sama seperti YOLO default)
-def generate_colors(num_classes):
-    colors = []
-    np.random.seed(42)  # Seed tetap agar warna konsisten
-    for i in range(num_classes):
-        color = tuple(np.random.randint(0, 255, 3).tolist())
-        colors.append(color)
-    return colors
-
-# Generate warna untuk semua kelas
-CLASS_COLORS = generate_colors(len(label_map))
-
 @app.route('/')
 def home():
     return render_template('home.html')
 
-
 @app.route('/deteksi')
 def index():
-    return render_template('webcam_live.html')
-
-
-def gen_frames():
-    cap = cv2.VideoCapture(0)  # Mengakses kamera
-    while True:
-        success, frame = cap.read()
-        if not success:
-            break
-        else:
-            results = model.predict(source=frame, conf=0.4, save=False, verbose=False)
-            result = results[0]
-            annotated_frame = frame.copy()
-
-            if result.boxes:
-                for box in result.boxes:
-                    cls_id = int(box.cls[0])
-                    conf = float(box.conf[0])
-                    
-                    # Ambil label dari model YOLO terlebih dahulu
-                    label = model.names[cls_id]
-                    # Gunakan label_map untuk mendapatkan nama ular
-                    label_text = label_map.get(str(label), f"Label {label}")
-                    
-                    # Koordinat bounding box
-                    x1, y1, x2, y2 = map(int, box.xyxy[0])
-                    
-                    # Gunakan warna yang sama dengan YOLO default per kelas
-                    color = CLASS_COLORS[cls_id % len(CLASS_COLORS)]
-
-                    # Gambar kotak deteksi dengan warna sesuai kelas
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-
-                    # Tampilkan label dan confidence
-                    text = f"{label_text} ({conf * 100:.1f}%)"
-                    
-                    # Background untuk text agar lebih mudah dibaca
-                    (text_width, text_height), baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-                    cv2.rectangle(annotated_frame, (x1, y1 - text_height - 10), 
-                                (x1 + text_width, y1), color, -1)
-                    
-                    cv2.putText(annotated_frame, text, (x1, y1 - 5),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-
-            # Encode frame ke JPEG
-            ret, buffer = cv2.imencode('.jpg', annotated_frame)
-            frame_bytes = buffer.tobytes()
-
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-
-
-@app.route('/video_feed')
-def video_feed():
-    return Response(gen_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
+    return render_template('webcam_live.html')  # Versi JavaScript
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -166,13 +97,13 @@ def upload():
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
 
-            # Prediksi menggunakan YOLO
+            # Prediksi
             results = model.predict(source=filepath, conf=0.4, save=False, verbose=False)
             result = results[0]
             result_path = os.path.join(UPLOAD_FOLDER, 'result_' + filename)
             result.save(filename=result_path)
 
-            # Ekstrak hasil prediksi
+            # Ambil hasil
             if result.boxes:
                 kelas = int(result.boxes.cls[0])
                 label = model.names[kelas]
@@ -184,12 +115,13 @@ def upload():
 
             image_path = url_for('static', filename='uploads/' + os.path.basename(result_path))
 
-            return render_template('upload_result.html',
-                                   image_path=image_path,
-                                   label=label_text,
-                                   confidence=round(confidence, 2))
+            return f"""
+            <h3>📷 Hasil Deteksi</h3>
+            <img src="{image_path}" width="640" />
+            <p><strong>{label_text}</strong><br>Confidence: {round(confidence, 2)}%</p>
+            <a href="/deteksi">🔁 Coba Lagi</a> | <a href="/">🏠 Kembali</a>
+            """
     return render_template('upload_page.html')
 
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(debug=True)
