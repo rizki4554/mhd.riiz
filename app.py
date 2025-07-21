@@ -7,6 +7,15 @@ import numpy as np
 
 app = Flask(__name__)
 
+import urllib.request
+
+MODEL_PATH = "palingbaru.pt"
+
+if not os.path.exists(MODEL_PATH):
+    print("Downloading model...")
+    url = "https://drive.google.com/uc?export=download&id=1rOva-D9aOBxApVI_YKcKSxvPLw5xHs0U"
+    urllib.request.urlretrieve(url, MODEL_PATH)
+
 model = YOLO('palingbaru.pt')
 
 # Label map (dipotong untuk singkat)
