@@ -4,39 +4,14 @@ import cv2
 import os
 from datetime import datetime
 import numpy as np
-import urllib.request
-import logging
-
-# Logging debug saat awal runtime untuk Railway
-print("[DEBUG] App starting...")
 
 app = Flask(__name__)
 
-# Konfigurasi logging lebih eksplisit
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger("app")
-logger.debug("Initializing app...")
+model = YOLO('palingbaru.pt') 
 
-# Konstanta untuk model
-MODEL_PATH = "palingbaru.pt"
-GDRIVE_ID = "1rOva-D9aOBxApVI_YKcKSxvPLw5xHs0U"
-
-# Unduh model jika belum ada
-if not os.path.exists(MODEL_PATH):
-    logger.info("[DEBUG] Model belum ada, mulai download dari Google Drive...")
-    gdown_url = f"https://drive.google.com/uc?export=download&id={GDRIVE_ID}"
-    urllib.request.urlretrieve(gdown_url, MODEL_PATH)
-    logger.info("[DEBUG] Download model selesai!")
-else:
-    logger.info("[DEBUG] Model sudah tersedia, tidak perlu download.")
-
-# Load model
-model = YOLO(MODEL_PATH)
-logger.info("[DEBUG] Model YOLO berhasil diload.")
-
-# Label map (dipersingkat agar tidak panjang di sini)
+# Label map ular - menggunakan mapping yang sama dengan kode asli
 label_map = {
-     "31 0 0 0 1 1 1 1 0 0 0": "Acrochordus granulatus (Tidak Berbisa)",
+    "31 0 0 0 1 1 1 1 0 0 0": "Acrochordus granulatus (Tidak Berbisa)",
     "1": "Aipysurus laevis (Berbisa)",
     "2": "Atractus trilineatus (Tidak Berbisa)",
     "3": "Boiga cyanea (Berbisa)",
@@ -101,51 +76,82 @@ label_map = {
 UPLOAD_FOLDER = 'static/uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Warna per kelas
-np.random.seed(42)
-CLASS_COLORS = [tuple(np.random.randint(0, 255, 3).tolist()) for _ in range(len(label_map))]
+# Fungsi untuk generate warna unik per kelas (sama seperti YOLO default)
+def generate_colors(num_classes):
+    colors = []
+    np.random.seed(42)  # Seed tetap agar warna konsisten
+    for i in range(num_classes):
+        color = tuple(np.random.randint(0, 255, 3).tolist())
+        colors.append(color)
+    return colors
+
+# Generate warna untuk semua kelas
+CLASS_COLORS = generate_colors(len(label_map))
 
 @app.route('/')
 def home():
-    logger.debug("[DEBUG] Home route diakses.")
     return render_template('home.html')
+
 
 @app.route('/deteksi')
 def index():
-    logger.debug("[DEBUG] Halaman deteksi (webcam) dibuka.")
     return render_template('webcam_live.html')
 
+
 def gen_frames():
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(0)  # Mengakses kamera
     while True:
         success, frame = cap.read()
         if not success:
-            logger.warning("[WARNING] Gagal membaca frame dari kamera.")
             break
-        results = model.predict(source=frame, conf=0.4, save=False, verbose=False)
-        result = results[0]
-        annotated_frame = frame.copy()
+        else:
+            results = model.predict(source=frame, conf=0.4, save=False, verbose=False)
+            result = results[0]
+            annotated_frame = frame.copy()
 
-        for box in result.boxes:
-            cls_id = int(box.cls[0])
-            conf = float(box.conf[0])
-            label = model.names[cls_id]
-            label_text = label_map.get(str(label), f"Label {label}")
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            color = CLASS_COLORS[cls_id % len(CLASS_COLORS)]
-            cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
-            text = f"{label_text} ({conf * 100:.1f}%)"
-            (text_width, text_height), _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-            cv2.rectangle(annotated_frame, (x1, y1 - text_height - 10), (x1 + text_width, y1), color, -1)
-            cv2.putText(annotated_frame, text, (x1, y1 - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+            if result.boxes:
+                for box in result.boxes:
+                    cls_id = int(box.cls[0])
+                    conf = float(box.conf[0])
+                    
+                    # Ambil label dari model YOLO terlebih dahulu
+                    label = model.names[cls_id]
+                    # Gunakan label_map untuk mendapatkan nama ular
+                    label_text = label_map.get(str(label), f"Label {label}")
+                    
+                    # Koordinat bounding box
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    
+                    # Gunakan warna yang sama dengan YOLO default per kelas
+                    color = CLASS_COLORS[cls_id % len(CLASS_COLORS)]
 
-        ret, buffer = cv2.imencode('.jpg', annotated_frame)
-        frame_bytes = buffer.tobytes()
-        yield (b'--frame\r\nContent-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                    # Gambar kotak deteksi dengan warna sesuai kelas
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), color, 2)
+
+                    # Tampilkan label dan confidence
+                    text = f"{label_text} ({conf * 100:.1f}%)"
+                    
+                    # Background untuk text agar lebih mudah dibaca
+                    (text_width, text_height), baseline = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+                    cv2.rectangle(annotated_frame, (x1, y1 - text_height - 10), 
+                                (x1 + text_width, y1), color, -1)
+                    
+                    cv2.putText(annotated_frame, text, (x1, y1 - 5),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
+
+            # Encode frame ke JPEG
+            ret, buffer = cv2.imencode('.jpg', annotated_frame)
+            frame_bytes = buffer.tobytes()
+
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
 
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(gen_frames(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload():
@@ -155,28 +161,35 @@ def upload():
         file = request.files['image']
         if file.filename == '':
             return redirect(request.url)
-        filename = datetime.now().strftime("%Y%m%d%H%M%S") + "_" + file.filename
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        file.save(filepath)
+        if file:
+            filename = datetime.now().strftime("%Y%m%d%H%M%S") + "_" + file.filename
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            file.save(filepath)
 
-        results = model.predict(source=filepath, conf=0.4, save=False, verbose=False)
-        result = results[0]
-        result_path = os.path.join(UPLOAD_FOLDER, 'result_' + filename)
-        result.save(filename=result_path)
+            # Prediksi menggunakan YOLO
+            results = model.predict(source=filepath, conf=0.4, save=False, verbose=False)
+            result = results[0]
+            result_path = os.path.join(UPLOAD_FOLDER, 'result_' + filename)
+            result.save(filename=result_path)
 
-        if result.boxes:
-            kelas = int(result.boxes.cls[0])
-            label = model.names[kelas]
-            confidence = float(result.boxes.conf[0]) * 100
-            label_text = label_map.get(str(label), f"Label {label}")
-        else:
-            label_text = 'Tidak ada ular terdeteksi'
-            confidence = 0.0
+            # Ekstrak hasil prediksi
+            if result.boxes:
+                kelas = int(result.boxes.cls[0])
+                label = model.names[kelas]
+                confidence = float(result.boxes.conf[0]) * 100
+                label_text = label_map.get(str(label), f"Label {label}")
+            else:
+                label_text = 'Tidak ada ular terdeteksi'
+                confidence = 0.0
 
-        image_path = url_for('static', filename='uploads/' + os.path.basename(result_path))
+            image_path = url_for('static', filename='uploads/' + os.path.basename(result_path))
 
-        return render_template('upload_result.html', image_path=image_path, label=label_text, confidence=round(confidence, 2))
+            return render_template('upload_result.html',
+                                   image_path=image_path,
+                                   label=label_text,
+                                   confidence=round(confidence, 2))
     return render_template('upload_page.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
