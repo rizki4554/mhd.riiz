@@ -1,5 +1,5 @@
 [build]
-nixpkgs = ["python311", "gcc", "libGL", "glib", "libSM", "libXext", "libXrender", "pkg-config", "libglvnd", "mesa"]
+nixpkgs = ["python311", "gcc", "libGL", "glib", "libSM", "libXext", "libXrender", "pkg-config", "ffmpeg", "libopencv"]
 
 [start]
-cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
+cmd = "export LD_LIBRARY_PATH=/nix/store/*-opencv-*/lib:$LD_LIBRARY_PATH && gunicorn app:app --bind 0.0.0.0:$PORT"
