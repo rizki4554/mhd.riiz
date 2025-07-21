@@ -1,5 +1,5 @@
 [build]
-nixpkgs = ["python311", "gcc", "libGL", "glib", "libSM", "libXext", "libXrender", "pkg-config"]
+nixpkgs = ["python311", "gcc", "libGL", "glib", "libSM", "libXext", "libXrender", "pkg-config", "libglvnd", "mesa"]
 
 [start]
 cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
