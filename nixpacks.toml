@@ -1,2 +1,2 @@
-[phases.setup]
-nixPkgs = ['libGL', 'mesa', 'mesa_glu']
+[build]
+nixpkgs = ["libGL", "python311", "gcc"]
