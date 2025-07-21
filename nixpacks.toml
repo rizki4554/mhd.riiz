@@ -1,5 +1,5 @@
 [build]
-nixpkgs = ["libGL", "libGLU", "pkg-config", "python311", "gcc", "glib"]
+nixpkgs = ["libGL", "libGLU", "pkg-config", "python311", "gcc", "glib", "mesa", "mesa_glu", "libxrender", "xorg.libXext", "xorg.libX11"]
 
 [variables]
 OPENCV_IO_ENABLE_OPENEXR = "0"
