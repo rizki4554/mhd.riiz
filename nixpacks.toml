@@ -1,5 +1,18 @@
-[build]
-nixpkgs = ["python311", "gcc", "libGL", "glib", "libSM", "libXext", "libXrender", "pkg-config", "ffmpeg", "libopencv"]
+[phases.setup]
+nixPkgs = ["python311", "gcc", "libGL", "glib", "libSM", "libXext", "libXrender", "pkg-config", "ffmpeg"]
+
+[phases.install]
+cmds = [
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = ["echo 'Build phase complete'"]
 
 [start]
-cmd = "export LD_LIBRARY_PATH=/nix/store/*-opencv-*/lib:$LD_LIBRARY_PATH && gunicorn app:app --bind 0.0.0.0:$PORT"
+cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --max-requests 100 --max-requests-jitter 10"
+
+[variables]
+PYTHONUNBUFFERED = "1"
+OPENCV_IO_ENABLE_OPENEXR = "1"
