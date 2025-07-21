@@ -1,5 +1,6 @@
 flask
 ultralytics
-opencv-python-headless
+opencv-python-headless  # ← Ganti ini
 numpy
 gunicorn
+gdown  
