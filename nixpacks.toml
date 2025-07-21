@@ -1,8 +1,5 @@
 [build]
-nixpkgs = ["python311", "gcc"]
-
-[phases.setup]
-nixPkgs = ["libgl", "glib", "libsm", "libxext", "libxrender", "pkg-config"]
+nixpkgs = ["python311", "gcc", "libGL", "glib", "libSM", "libXext", "libXrender", "pkg-config"]
 
 [start]
 cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
