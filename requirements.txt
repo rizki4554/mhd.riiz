@@ -1,6 +1,6 @@
 flask
 ultralytics
-opencv-contrib-python-headless==4.8.1.78
+opencv-python-headless==4.8.1.78
 numpy
 gunicorn
 gdown
