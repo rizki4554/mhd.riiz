@@ -1,6 +1,5 @@
 [build]
-nixpkgs = ["libGL", "libGLU", "pkg-config", "python311", "gcc", "glib", "mesa", "mesa_glu", "libxrender", "xorg.libXext", "xorg.libX11"]
+nixpkgs = ["libGL", "python311", "gcc"]
 
-[variables]
-OPENCV_IO_ENABLE_OPENEXR = "0"
-OPENCV_IO_ENABLE_JASPER = "0"
+[start]
+cmd = "gunicorn app:app --bind 0.0.0.0:$PORT"
