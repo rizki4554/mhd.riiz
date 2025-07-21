@@ -1,2 +1,2 @@
 [build]
-nixpkgs = ["libGL", "python311", "gcc"]
+nixpkgs = ["libGL", "libGLU", "pkg-config", "python311", "gcc"]
