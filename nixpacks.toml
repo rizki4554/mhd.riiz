@@ -1,17 +1,22 @@
 [phases.setup]
-nixPkgs = ["python311", "gcc", "libGL", "glib", "xorg.libSM", "xorg.libXext", "xorg.libXrender", "pkg-config", "ffmpeg"]
+nixPkgs = ["python311", "gcc", "pkg-config", "libGL", "glib"]
 
 [phases.install]
 cmds = [
-    "pip install --upgrade pip",
-    "pip install -r requirements.txt"
+    "pip install --no-cache-dir --upgrade pip",
+    "pip install --no-cache-dir numpy==1.24.3",
+    "pip install --no-cache-dir torch==2.0.1+cpu torchvision==0.15.2+cpu -f https://download.pytorch.org/whl/torch_stable.html",
+    "pip install --no-cache-dir opencv-python-headless==4.8.1.78",
+    "pip install --no-cache-dir ultralytics==8.0.196",
+    "pip install --no-cache-dir flask==2.3.3 gunicorn==21.2.0 pillow==10.0.0",
+    "pip install --no-cache-dir pyyaml>=5.3.1 requests>=2.23.0 matplotlib>=3.2.2 scipy>=1.4.1"
 ]
 
 [phases.build]
 cmds = ["echo 'Build phase complete'"]
 
 [start]
-cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --max-requests 100 --max-requests-jitter 10"
+cmd = "gunicorn app:app --bind 0.0.0.0:$PORT --timeout 120 --workers 1 --max-requests 50"
 
 [variables]
 PYTHONUNBUFFERED = "1"
